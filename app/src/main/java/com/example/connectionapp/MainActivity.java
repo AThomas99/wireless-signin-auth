@@ -1,18 +1,24 @@
 package com.example.connectionapp;
 
-import static androidx.core.content.PackageManagerCompat.LOG_TAG;
 
-import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.app.AppCompatActivity;
 
+import android.annotation.SuppressLint;
+import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
-import android.net.wifi.WifiConfiguration;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.net.wifi.WifiNetworkSuggestion;
+
+import androidx.appcompat.app.AppCompatActivity;
+
+import java.util.ArrayList;
+import java.util.List;
 
 
 public class MainActivity extends AppCompatActivity {
@@ -27,6 +33,7 @@ public class MainActivity extends AppCompatActivity {
 
         // Start Fetch Device Id
         deviceId = (TextView) findViewById(R.id.deviceID);
+        @SuppressLint("HardwareIds")
         String id = Settings.Secure.getString(getContentResolver(), Settings.Secure.ANDROID_ID);
         String deviceIdentification = "Device ID: ";
         deviceId.setText(deviceIdentification + id);
@@ -48,7 +55,7 @@ public class MainActivity extends AppCompatActivity {
                     })
                     .show();
         } else {
-            Toast.makeText(MainActivity.this, "Please Wait...!", Toast.LENGTH_LONG).show();
+            Toast.makeText(MainActivity.this, "Connected to configured network...!", Toast.LENGTH_LONG).show();
 
         }
 
@@ -57,32 +64,37 @@ public class MainActivity extends AppCompatActivity {
 
     public boolean isConnected() {
         // Working Code
-        // ConnectivityManager connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-        // NetworkInfo networkInfo = connectivityManager.getActiveNetworkInfo();
+         ConnectivityManager connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+         NetworkInfo networkInfo = connectivityManager.getActiveNetworkInfo();
 
-        // return networkInfo != null && networkInfo.isConnected();
+        // return
 
         // Another Try - Connect to a specific network
-        // Variables for Wireless connection
-        String networkSSID = "egovridc-Vancho";
-        String networkPass = "AjddKDZh";
 
-        WifiConfiguration conf = new WifiConfiguration();
-        conf.SSID = "\"" + networkSSID + "\"";
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+            final WifiNetworkSuggestion suggestion2 =
+                    new WifiNetworkSuggestion.Builder()
+                            .setSsid("egovridc-Vancho")
+                            .setWpa2Passphrase("AjddKDZh")
+                            .setIsAppInteractionRequired(true) // Optional (Needs location permission)
+                            .build();
 
-        conf.wepKeys[0] = "\"" + networkPass + "\"";
-        conf.wepTxKeyIndex = 0;
-        conf.allowedKeyManagement.set(WifiConfiguration.KeyMgmt.NONE);
-        conf.allowedGroupCiphers.set(WifiConfiguration.GroupCipher.WEP40);
+            final List<WifiNetworkSuggestion> suggestionsList =
+                    new ArrayList<WifiNetworkSuggestion>();
+            suggestionsList.add(suggestion2);
 
-        conf.preSharedKey = "\""+ networkPass +"\"";
+            WifiManager wifiManager = (WifiManager) getApplicationContext().getSystemService(WIFI_SERVICE);
+            final int status = wifiManager.addNetworkSuggestions(suggestionsList);
+            if (status != WifiManager.STATUS_NETWORK_SUGGESTIONS_SUCCESS) {
+                Toast.makeText(MainActivity.this, "Suggestion failed", Toast.LENGTH_LONG).show();
+            } else {
+                Toast.makeText(MainActivity.this, "Suggestion success", Toast.LENGTH_LONG).show();
+            }
 
-        conf.allowedKeyManagement.set(WifiConfiguration.KeyMgmt.NONE);
+        }
 
-        WifiManager wifiManager = (WifiManager)getApplicationContext().getSystemService(Context.WIFI_SERVICE);
-        wifiManager.addNetwork(conf);
+        return networkInfo != null && networkInfo.isConnected();
 
-        return true;
     }
 
 
